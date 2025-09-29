@@ -106,45 +106,43 @@ export default function ProjectForm() {
       try {
         const collectionRef = collection(db, 'Materialidades');
         const snapshot = await getDocs(collectionRef);
-
-        if (snapshot.empty) {
-          console.log('No hay documentos en la colección.');
-          return;
-        }
-
+  
         const dataObject = {};
-
+  
+        // Recorre las categorías principales
         const fetchSubcollections = snapshot.docs.map(async (doc) => {
           const category = doc.id;
           dataObject[category] = {};
-
+  
           const subcollectionNames = await getSubcollectionNames();
-
+  
           const subcollectionPromises = subcollectionNames.map(async (subcollectionName) => {
             const subcollectionRef = collection(db, `Materialidades/${category}/${subcollectionName}`);
             const subcollectionSnapshot = await getDocs(subcollectionRef);
-
+  
             if (!subcollectionSnapshot.empty) {
-              dataObject[category][subcollectionName] = {};
-
+              // Almacenar los documentos en el orden en que Firebase los entrega
+              const subcollection = {};
               subcollectionSnapshot.docs.forEach((subDoc) => {
-                dataObject[category][subcollectionName][subDoc.id] = subDoc.data();
+                subcollection[subDoc.id] = subDoc.data();
               });
+  
+              dataObject[category][subcollectionName] = subcollection;
             }
           });
-
+  
           await Promise.all(subcollectionPromises);
         });
-
+  
         await Promise.all(fetchSubcollections);
-
-        setDataJson(dataObject);
-
+  
+        setDataJson(dataObject); // Usa el `dataObject` sin invertir
+  
       } catch (error) {
         console.error("Error al obtener los documentos: ", error);
       }
     };
-
+  
     const getSubcollectionNames = async () => {
       return [
         'Cielo Losa', 'Cielo Volcanita', 'Cornisas', 'Muro Cerámico', 'Muro Papel',
@@ -158,7 +156,7 @@ export default function ProjectForm() {
         'Piso Pastelon','Reja Perimetral Fierro','Porton Madera Estructura Fierro','Deteccion De Fuga De Agua','Sistema Eléctrico'
       ];
     };
-
+  
     fetchData();
   }, []);
 

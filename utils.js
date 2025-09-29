@@ -34,32 +34,39 @@ export const generateRows = (data, realCounts, measurements, startIndex) => {
 
   for (const category in data) {
     for (const section in data[category]) {
+      // Agregar el título de la sección primero
       let sectionRows = [[section.toUpperCase(), "", "", "", "", "", "", "", ""]];
       let sectionStartIndex = rowIndex + 1;
       rowIndex++;
 
       let sectionValid = false;
 
-      for (const item in data[category][section]) {
-        const { unidad = "", precio = 0, medida = "" } = data[category][section][item] || {};
-        const realCount = realCounts[`${category}.${section}.${item}.unidad`] || "0";
+      // Obtener los elementos de la subcolección en orden inverso
+      const items = Object.entries(data[category][section]).reverse();
+
+      // Recorrer los elementos en orden inverso para agregar al Excel
+      for (const [item, detalles] of items) {
+        const { unidad = "", precio = 0, medida = "" } = detalles || {};
+        
+        // Condición especial para "Análisis Y Diagnóstico Circuito Eléctrico"
+        let realCount = item === "Análisis Y Diagnóstico Circuito Eléctrico"
+          ? realCounts[`${category}.${section}.${item}.cantidadPuntos`] || "0"
+          : realCounts[`${category}.${section}.${item}.unidad`] || "0";
+        
         const percentage = realCounts[`${category}.${section}.${item}.percentage`] || "100";
         const largo = measurements.length || 1;
         const ancho = measurements.width || 1;
         const altura = measurements.height || 1;
+        
+        let precioUnitario = parseFloat(precio);
 
-        // Comprobar si hay un precio manual ingresado
-        let precioUnitario = realCounts[`${category}.${section}.${item}.precioManual`]
-          ? parseFloat(realCounts[`${category}.${section}.${item}.precioManual`])
-          : parseFloat(precio); // Usa el precio predeterminado si no hay manual
-
-        // Calcular el total de acuerdo a las medidas
+        // Calcular el total de acuerdo a las medidas o puntos eléctricos
         let total = calculateTotal(realCount, largo, ancho, altura, medida);
 
         // Aplicar el porcentaje después de calcular el total
         total = total * (parseFloat(percentage) / 100);
 
-        // Calcular el precio total usando el precio manual si está disponible
+        // Calcular el precio total
         const totalPrice = total * precioUnitario;
 
         if (realCount !== "0" && realCount !== "") {
@@ -67,21 +74,22 @@ export const generateRows = (data, realCounts, measurements, startIndex) => {
 
           let calculatedTotal = calculateTotal(realCount, largo, ancho, altura, medida);
           let discountedTotal = calculatedTotal * (parseFloat(percentage) / 100); // Aplicar el porcentaje aquí
-
+        
           const totalPrice = discountedTotal * precioUnitario;
-
-          rows.push([
+        
+          sectionRows.push([
             "     " + item.toUpperCase(),
             "", "", "", medida, discountedTotal.toFixed(1), precioUnitario.toFixed(0), // Prec. Unit. sin decimales
             formatCurrency(totalPrice), // Prec. Total
             ""
           ]);
-
+          
           rowIndex++;
         }
       }
 
       if (sectionValid) {
+        // Añadir el título y luego los elementos en orden inverso
         rows.push(...sectionRows);
         rowIndex++;
       } else {
